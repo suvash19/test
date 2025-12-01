@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Prediction - Customer Churn Prediction System</title>
+    <link rel="stylesheet" href="/static/css/bulk_prediction.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div class="bulk-prediction-container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1>Bulk Customer Churn Prediction</h1>
+            <div class="header-actions">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/" class="nav-link">Single Prediction</a>
+            </div>
+        </div>
+
+        <!-- A. CSV Upload Box -->
+        <div class="card Bulk_Upload" id="uploadCard">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📂</div>
+                <div class="upload-text">Drag & Drop CSV Here</div>
+                <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                <button class="btn-browse" onclick="document.getElementById('fileInput').click()">Browse File</button>
+                <div class="upload-help">
+                    <a href="/api/download-template" id="templateLink">Download Sample CSV Template</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- B. File Validation Card -->
+        <div class="card Bulk_Validation" id="validationCard" style="display: none;">
+            <div class="validation-item">
+                <span class="validation-icon">✅</span>
+                <span class="validation-label">File Name:</span>
+                <span class="validation-value" id="fileName">-</span>
+            </div>
+            <div class="validation-item">
+                <span class="validation-icon">✅</span>
+                <span class="validation-label">Number of Rows:</span>
+                <span class="validation-value" id="rowCount">-</span>
+            </div>
+            <div class="validation-item" id="columnValidation">
+                <span class="validation-icon">✅</span>
+                <span class="validation-label">Columns Status:</span>
+                <span class="validation-value" id="columnStatus">-</span>
+            </div>
+        </div>
+
+        <!-- C. Predict Button -->
+        <div class="predict-button-container">
+            <button class="btn-predict" id="predictBtn" disabled>
+                Predict All Customers
+            </button>
+        </div>
+
+        <!-- D. Results Table -->
+        <div class="card Bulk_ResultsTable" id="resultsCard" style="display: none;">
+            <h2>Prediction Results</h2>
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>customerID</th>
+                            <th>Tenure</th>
+                            <th>MonthlyCharges</th>
+                            <th>Churn_Prob</th>
+                            <th>Result</th>
+                            <th>Top Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- E. Charts Section -->
+        <div class="charts-container Bulk_Charts" id="chartsCard" style="display: none;">
+            <div class="chart-card">
+                <h3>Churn vs Non-Churn Distribution</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Feature Importance</h3>
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- F. Export Buttons -->
+        <div class="export-container Buttons_Export" id="exportButtons" style="display: none;">
+            <button class="btn-export btn-primary" id="exportResults">Download Results CSV</button>
+            <button class="btn-export btn-secondary" id="exportChurners">Download Only Churners</button>
+            <button class="btn-export btn-secondary" id="exportCharts">Export Charts (PNG/PDF)</button>
+        </div>
+    </div>
+
+    <script>
+        let uploadedData = null;
+        let predictions = null;
+        let csvData = null;
+        
+        // Initialize chart variables
+        window.pieChart = null;
+        window.barChart = null;
+
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        
+        // Drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'text/csv' || files[0].name.endsWith('.csv')) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                Papa.parse(text, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        validateFile(results.data, file.name);
+                    },
+                    error: function(error) {
+                        alert('Error parsing CSV: ' + error.message);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        }
+
+        function validateFile(data, fileName) {
+            uploadedData = data;
+            csvData = data;
+            
+            // Required columns (based on model features)
+            const requiredColumns = [
+                'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService', 'MultipleLines',
+                'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                'TechSupport', 'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling',
+                'PaymentMethod', 'TotalCharges', 'tenure'
+            ];
+            
+            const dataColumns = Object.keys(data[0] || {});
+            const missingColumns = requiredColumns.filter(col => !dataColumns.includes(col));
+            const isValid = missingColumns.length === 0;
+
+            // Show validation card
+            document.getElementById('validationCard').style.display = 'block';
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('rowCount').textContent = data.length.toLocaleString();
+            
+            const columnValidation = document.getElementById('columnValidation');
+            const columnStatus = document.getElementById('columnStatus');
+            
+            if (isValid) {
+                columnValidation.innerHTML = `
+                    <span class="validation-icon">✅</span>
+                    <span class="validation-label">Columns Status:</span>
+                    <span class="validation-value" style="color: #28a745;">All Required Columns Present</span>
+                `;
+                document.getElementById('predictBtn').disabled = false;
+            } else {
+                columnValidation.innerHTML = `
+                    <span class="validation-icon">❌</span>
+                    <span class="validation-label">Columns Status:</span>
+                    <span class="validation-value" style="color: #dc3545;">Missing: ${missingColumns.join(', ')}</span>
+                `;
+                document.getElementById('predictBtn').disabled = true;
+            }
+        }
+
+        // Predict button
+       // Replace the existing predict button click handler with this updated version
+document.getElementById('predictBtn').addEventListener('click', async function() {
+    if (!uploadedData) return;
+    
+    this.disabled = true;
+    this.textContent = 'Predicting...';
+    
+    try {
+        // Create FormData and append file
+        const formData = new FormData();
+        
+        // Convert uploadedData back to CSV
+        const csvString = Papa.unparse(uploadedData);
+        const csvBlob = new Blob([csvString], { type: 'text/csv' });
+        const csvFile = new File([csvBlob], 'upload.csv', { type: 'text/csv' });
+        
+        formData.append('file', csvFile);
+        
+        const response = await fetch('/api/bulk-predict', {
+            method: 'POST',
+            body: formData  // Send as FormData instead of JSON
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            predictions = result.predictions;
+            displayResults(result.predictions);
+            generateCharts(result.predictions);
+            document.getElementById('resultsCard').style.display = 'block';
+            document.getElementById('chartsCard').style.display = 'block';
+            document.getElementById('exportButtons').style.display = 'flex';
+            this.textContent = 'Prediction Complete';
+        } else {
+            alert('Error: ' + result.error);
+            this.disabled = false;
+            this.textContent = 'Predict All Customers';
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+        this.disabled = false;
+        this.textContent = 'Predict All Customers';
+    }
+});
+        function displayResults(predictions) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+            
+            predictions.forEach((pred, index) => {
+                const row = tbody.insertRow();
+                row.className = index % 2 === 0 ? 'even' : 'odd';
+                
+                row.insertCell(0).textContent = pred.customerID || `Customer_${index + 1}`;
+                row.insertCell(1).textContent = pred.tenure || '-';
+                row.insertCell(2).textContent = pred.MonthlyCharges ? '$' + parseFloat(pred.MonthlyCharges).toFixed(2) : '-';
+                row.insertCell(3).textContent = (pred.churn_probability * 100).toFixed(2) + '%';
+                
+                const resultCell = row.insertCell(4);
+                const isChurn = pred.prediction === 1;
+                resultCell.innerHTML = isChurn 
+                    ? '<span class="badge badge-churn">CHURN</span>'
+                    : '<span class="badge badge-no-churn">NO CHURN</span>';
+                
+                row.insertCell(5).textContent = pred.top_reason || '-';
+            });
+        }
+
+        function generateCharts(predictions) {
+            // Pie Chart - Churn vs Non-Churn
+            const churnCount = predictions.filter(p => p.prediction === 1).length;
+            const noChurnCount = predictions.filter(p => p.prediction === 0).length;
+            
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            // Destroy existing chart if it exists and has destroy method
+            if (window.pieChart && typeof window.pieChart.destroy === 'function') {
+                window.pieChart.destroy();
+            }
+            window.pieChart = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Non-Churn', 'Churn'],
+                    datasets: [{
+                        data: [noChurnCount, churnCount],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Horizontal Bar Chart - Feature Importance (mock data for now)
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            // Destroy existing chart if it exists and has destroy method
+            if (window.barChart && typeof window.barChart.destroy === 'function') {
+                window.barChart.destroy();
+            }
+            
+            // Sample feature importance - replace with actual from model if available
+            const featureImportance = {
+                'Contract Type': 0.35,
+                'Tenure': 0.28,
+                'Monthly Charges': 0.22,
+                'Payment Method': 0.15
+            };
+            
+            window.barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(featureImportance),
+                    datasets: [{
+                        label: 'Importance',
+                        data: Object.values(featureImportance),
+                        backgroundColor: '#1A73E8',
+                        borderColor: '#1A73E8',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 0.4
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Export buttons
+        document.getElementById('exportResults').addEventListener('click', function() {
+            if (!predictions) return;
+            exportToCSV(predictions, 'bulk_prediction_results.csv');
+        });
+
+        document.getElementById('exportChurners').addEventListener('click', function() {
+            if (!predictions) return;
+            const churners = predictions.filter(p => p.prediction === 1);
+            exportToCSV(churners, 'churners_only.csv');
+        });
+
+        document.getElementById('exportCharts').addEventListener('click', function() {
+            // Export charts as PNG
+            const pieCanvas = document.getElementById('pieChart');
+            const barCanvas = document.getElementById('barChart');
+            
+            if (!pieCanvas || !barCanvas) {
+                alert('Charts not available. Please run prediction first.');
+                return;
+            }
+            
+            try {
+                const pieLink = document.createElement('a');
+                pieLink.download = 'churn_distribution.png';
+                pieLink.href = pieCanvas.toDataURL('image/png');
+                pieLink.click();
+                
+                setTimeout(() => {
+                    const barLink = document.createElement('a');
+                    barLink.download = 'feature_importance.png';
+                    barLink.href = barCanvas.toDataURL('image/png');
+                    barLink.click();
+                }, 100);
+            } catch (error) {
+                alert('Error exporting charts: ' + error.message);
+            }
+        });
+
+        function exportToCSV(data, filename) {
+            if (!data || data.length === 0) return;
+            
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => {
+                    const value = row[header];
+                    return typeof value === 'string' && value.includes(',') 
+                        ? `"${value}"` 
+                        : value;
+                }).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+    </script>
+</body>
+</html>
+

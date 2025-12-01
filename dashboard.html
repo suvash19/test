@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCPS - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <header class="top-header">
+      <div class="logo-area">
+
+        <div class="logo-text">
+          <h2>CCPS</h2>
+          <p>Churn Prediction System</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="title-area">
+        <h1>Customer Churn Prediction System</h1>
+        <p>Leverage advanced machine learning to predict and prevent customer churn with precision</p>
+    </div>
+
+    <div class="card-container">
+        <a href="/" class="option-card">
+           <div class="icon-card blue">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"></path>
+                    <path d="M6 20v-1c0-2.21 3.58-4 6-4s6 1.79 6 4v1"></path>
+                </svg>
+            </div>
+            <h2>Single Prediction</h2>
+            <p>Predict churn for a single customer</p>
+        </a>
+
+        <a href="/bulk-prediction" class="option-card">
+            <div class="icon-card purple">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v14"></path>
+                    <polyline points="5 10 12 3 19 10"></polyline>
+                    <rect x="5" y="17" width="14" height="4" rx="2" ry="2"></rect>
+                </svg>
+            </div>
+
+            <h2>Bulk Prediction</h2>
+            <p>Upload CSV and predict multiple customers</p>
+        </a>
+    </div>
+
+    <footer>
+        © 2025 CCPS – Customer Churn Prediction System
+    </footer>
+</body>
+</html>
