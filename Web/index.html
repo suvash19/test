@@ -1,0 +1,350 @@
+<!-- ...existing code... -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customer Churn Prediction - Single Prediction</title>
+
+  <!-- Add Bootstrap for grid layout -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+ 
+      .formbold-form-select {
+        font-size: 5px;
+        padding: 10px 12px;
+      }
+
+    .formbold-form-select {
+      width: 100%;
+      padding: 10px 5px;
+      border-radius: 5px;
+      border: 2px solid #dde3ec;
+      background: #ffffff;
+      font-weight: 500;
+      font-size: 18px;
+      color: #71757f;
+      outline: none;
+    }
+    .formbold-form-select:focus {
+      border-color: #6a64f1;
+      box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.05);
+    }
+    .formbold-form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #dde3ec;
+      outline: none;
+    }
+    .formbold-form-input:focus { box-shadow: 0 3px 6px rgba(0,0,0,0.04); border-color:#6a64f1; }
+
+    .formbold-mb-5 { margin-bottom: 16px; }
+    .formbold-btn {
+      display:block;
+      width:100%;
+      padding:12px 18px;
+      background:#1A73E8;
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    .result-container { margin-top: 30px; padding: 24px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none; }
+    .result-container.show { display: block; }
+    .result-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #4943f0; }
+    .result-card { padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+    .result-card.churn { background-color: #FFEBEE; border-left: 4px solid #dc3545; }
+    .result-card.no-churn { background-color: #E8F5E9; border-left: 4px solid #28a745; }
+    .prediction-label { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .probability-bar { width: 100%; height: 30px; background-color: #e0e0e0; border-radius: 15px; overflow: hidden; margin-top: 8px; position: relative; }
+    .probability-fill { height: 100%; border-radius: 15px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+    .probability-fill.churn { background: linear-gradient(90deg, #dc3545, #c82333); }
+    .probability-fill.no-churn { background: linear-gradient(90deg, #28a745, #218838); }
+    .loading { text-align: center; padding: 20px; display: none; }
+    .loading.show { display: block; }
+    .error-message { background-color: #FFEBEE; color: #dc3545; padding: 12px; border-radius: 5px; margin-top: 12px; display: none; }
+    .error-message.show { display: block; }
+
+    /* small helper to keep labels consistent */
+    .form-label-md { font-weight:600; color:#100f0f; margin-bottom:6px; display:block; }
+  </style>
+</head>
+<body>
+
+
+  <div class="container py-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <!-- alignment centered title  of Single Customer Prediction -->
+          <div class="flex-grow-1 text-center">
+            <h2 class="mb-0">Customer Churn Prediction </h2>
+            <!-- fill the value below to predict customer churn -->
+            <h5 class="text-muted">Please fill in the details below to get a prediction.</h5>
+              
+
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/dashboard" class="btn btn-sm btn-primary">Dashboard</a>
+            <a href="/bulk-prediction" class="btn btn-sm btn-primary">Bulk Prediction</a>
+          </div>
+        </div>
+
+        <!-- Form: two questions per row using Bootstrap grid -->
+
+
+        <form id="predictionForm">
+          <div class="row">
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q1" class="form-label-md">Senior Citizen?</label>
+              <select class="formbold-form-select" name="q1" id="q1" required>
+                <option value="">-- Select --</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q2" class="form-label-md">Do You have a Partner?</label>
+              <select class="formbold-form-select" name="q2" id="q2" required>
+                <option value="">-- Select --</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q3" class="form-label-md">Are You financially Dependent?</label>
+              <select class="formbold-form-select" name="q3" id="q3" required>
+                <option value="">-- Select --</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q4" class="form-label-md">Do You have Phone Service?</label>
+              <select class="formbold-form-select" name="q4" id="q4" required>
+                <option value="">-- Select --</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q5" class="form-label-md">Do You have Multiple Lines?</label>
+              <select class="formbold-form-select" name="q5" id="q5" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Phone Service</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q6" class="form-label-md">Internet Service Type?</label>
+              <select class="formbold-form-select" name="q6" id="q6" required>
+                <option value="">-- Select --</option>
+                <option value="1">Fiber Optic</option>
+                <option value="0">DSL</option>
+                <option value="2">No Internet Service</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q7" class="form-label-md">Do You have Online Security?</label>
+              <select class="formbold-form-select" name="q7" id="q7" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q8" class="form-label-md">Do You have Online Backup?</label>
+              <select class="formbold-form-select" name="q8" id="q8" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q9" class="form-label-md">Do You have Device Protection?</label>
+              <select class="formbold-form-select" name="q9" id="q9" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q10" class="form-label-md">Do You have Tech Support?</label>
+              <select class="formbold-form-select" name="q10" id="q10" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q11" class="form-label-md">Do You Stream on TV?</label>
+              <select class="formbold-form-select" name="q11" id="q11" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q12" class="form-label-md">Do You Stream Movies?</label>
+              <select class="formbold-form-select" name="q12" id="q12" required>
+                <option value="">-- Select --</option>
+                <option value="2">Yes</option>
+                <option value="0">No</option>
+                <option value="1">No Internet Service</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q13" class="form-label-md">Contract Type?</label>
+              <select class="formbold-form-select" name="q13" id="q13" required>
+                <option value="">-- Select --</option>
+                <option value="0">Month-to-Month</option>
+                <option value="1">One Year</option>
+                <option value="2">Two Year</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q14" class="form-label-md">Are You using Paperless Billing?</label>
+              <select class="formbold-form-select" name="q14" id="q14" required>
+                <option value="">-- Select --</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q15" class="form-label-md">Payment Method?</label>
+              <select class="formbold-form-select" name="q15" id="q15" required>
+                <option value="">-- Select --</option>
+                <option value="2">Electronic Check</option>
+                <option value="3">Mailed Check</option>
+                <option value="0">Bank Transfer (Automatic)</option>
+                <option value="1">Credit Card (Automatic)</option>
+              </select>
+            </div>
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q16" class="form-label-md">Total Charges ($)</label>
+              <input type="number" step="0.01" name="q16" id="q16" placeholder="Enter Total Charges" class="formbold-form-input" required />
+            </div>
+
+            <div class="col-md-6 formbold-mb-5">
+              <label for="q17" class="form-label-md">Tenure (Months)</label>
+              <input type="number" name="q17" id="q17" placeholder="Enter Tenure in Months" class="formbold-form-input" required />
+            </div>
+
+            <div class="col-md-6 d-flex justify-content-center mb-3">
+              <button type="submit" class="formbold-btn w-100" id="submitBtn">Predict Churn</button>
+
+            </div>
+          </div>
+        </form>
+
+        <div class="loading" id="loading"><p>Predicting... Please wait</p></div>
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="result-container" id="resultContainer">
+          <div class="result-title">Prediction Result</div>
+          <div class="result-card" id="resultCard">
+            <div class="prediction-label" id="predictionLabel"></div>
+            <div style="margin-top: 12px;">
+              <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Confidence Level:</div>
+              <div class="probability-bar">
+                <div class="probability-fill" id="probabilityFill"></div>
+              </div>
+            </div>
+            <div style="margin-top: 12px; font-size: 14px; color: #666;">
+              <div><strong>No Churn Probability:</strong> <span id="noChurnProb">-</span>%</div>
+              <div style="margin-top: 4px;"><strong>Churn Probability:</strong> <span id="churnProb">-</span>%</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ...existing JS remains unchanged...
+    document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      document.getElementById('resultContainer').classList.remove('show');
+      document.getElementById('errorMessage').classList.remove('show');
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('submitBtn').disabled = true;
+
+      const formData = new FormData(this);
+      const data = {};
+      for (let [key, value] of formData.entries()) { data[key] = value; }
+
+      try {
+        const response = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('submitBtn').disabled = false;
+
+        if (response.ok && result.success) {
+          const resultContainer = document.getElementById('resultContainer');
+          const resultCard = document.getElementById('resultCard');
+          const predictionLabel = document.getElementById('predictionLabel');
+          const probabilityFill = document.getElementById('probabilityFill');
+
+          const isChurn = result.prediction === 1 || result.prediction === '1';
+          const churnProb = (result.probability && result.probability.length > 1) ? (result.probability[1] * 100).toFixed(2) : '0.00';
+          const noChurnProb = (result.probability && result.probability.length > 0) ? (result.probability[0] * 100).toFixed(2) : '0.00';
+
+          if (isChurn) {
+            resultCard.className = 'result-card churn';
+            predictionLabel.className = 'prediction-label churn';
+            predictionLabel.textContent = '⚠️ Customer Will CHURN';
+            probabilityFill.className = 'probability-fill churn';
+          } else {
+            resultCard.className = 'result-card no-churn';
+            predictionLabel.className = 'prediction-label no-churn';
+            predictionLabel.textContent = '✅ Customer Will NOT CHURN';
+            probabilityFill.className = 'probability-fill no-churn';
+          }
+
+          probabilityFill.style.width = (isChurn ? churnProb : noChurnProb) + '%';
+          probabilityFill.textContent = (isChurn ? churnProb : noChurnProb) + '%';
+          document.getElementById('churnProb').textContent = churnProb;
+          document.getElementById('noChurnProb').textContent = noChurnProb;
+
+          resultContainer.classList.add('show');
+          resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          const errorMsg = document.getElementById('errorMessage');
+          errorMsg.textContent = result.error || 'An error occurred during prediction.';
+          errorMsg.classList.add('show');
+        }
+      } catch (error) {
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('submitBtn').disabled = false;
+        const errorMsg = document.getElementById('errorMessage');
+        errorMsg.textContent = 'Network error: ' + error.message;
+        errorMsg.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>
+<!-- ...existing code... -->
